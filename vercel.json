@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+      {
+        "source": "/backend/:path*",
+        "destination": "https://healthbridge-patient-backend.vercel.app/:path*"
+      }
+    ]
+  }

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { StreamVideo, StreamVideoClient } from '@stream-io/video-react-sdk';
 import { useAuth } from './AuthContext';
 import CallProvider from './CallProvider';
+import { buildApiUrl } from '../util/api';
 
 const env = import.meta.env.VITE_NODE_ENV;
 
@@ -28,10 +29,10 @@ export function StreamVideoProvider({ children }) {
         };
 
         let key = null;
-        if (env === "dev") {
+        if (import.meta.env.VITE_NODE_ENV === 'dev') {
           key = import.meta.env.VITE_STREAM_VIDEO_KEY;
         } else {
-          const keyResponse = await fetch(`/api/getStreamKey`);
+          const keyResponse = await fetch(buildApiUrl('getStreamKey'));
           const keyData = await keyResponse.json();
 
           if (!keyResponse.ok) {

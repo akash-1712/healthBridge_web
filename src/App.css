@@ -1,74 +1,250 @@
+/* Stream SDK Theming - uses design system semantic tokens */
+:root {
+  /* Stream Chat CSS Variables */
+  --str-chat__primary-color: var(--color-primary-600);
+  --str-chat__primary-color-hover: var(--color-primary-700);
+  --str-chat__background-color: var(--color-bg-primary);
+  --str-chat__message-input-background: var(--color-bg-secondary);
+  --str-chat__message-input-border-radius: var(--radius-xl);
+  --str-chat__channel-header-background: var(--color-bg-secondary);
+  --str-chat__message-bubble-background: var(--color-bg-tertiary);
+  --str-chat__message-bubble-background-own: var(--color-primary-600);
+  --str-chat__channel-list-background: var(--color-bg-secondary);
+  --str-chat__channel-list-border-color: var(--color-border-primary);
+
+  /* Stream Video CSS Variables */
+  --str-video__background-color: var(--color-neutral-900);
+  --str-video__call-controls-background: var(--color-neutral-900/80);
+  --str-video__participant-border-color: var(--color-neutral-700);
+}
+
+.dark {
+  --str-chat__primary-color: var(--color-primary-500);
+  --str-chat__primary-color-hover: var(--color-primary-400);
+  --str-chat__background-color: var(--color-bg-primary);
+  --str-chat__message-input-background: var(--color-bg-secondary);
+  --str-chat__channel-header-background: var(--color-bg-secondary);
+  --str-chat__message-bubble-background: var(--color-bg-tertiary);
+  --str-chat__message-bubble-background-own: var(--color-primary-500);
+  --str-chat__channel-list-background: var(--color-bg-secondary);
+  --str-chat__channel-list-border-color: var(--color-border-primary);
+}
+
+/* Base styles */
 button {
   cursor: pointer;
 }
+
 .app {
   padding-top: 2px;
 }
-.str-video {
-    background-color: #272a30;
-    color: #ffffff;
-    height: 100vh;
-    /* border:2px solid red; */
-    width: 100vw;
-    display: flex;
-    flex-direction: column;
-    /* justify-content: center; */
-    /* align-items: center; */
 
-    min-width: 0;
-    max-width: 100%;
+/* Stream Video Container */
+.str-video {
+  background-color: var(--str-video__background-color);
+  color: #ffffff;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
 }
 
+/* Stream Chat Container */
 .str-chat__channel {
-    width: 80%;
-    margin: 0 auto;
-    padding-top: 10px;
-    /* margin-bottom: 30px !important; */
-    height: 100% !important;
-    position: relative;
-    /* box-sizing: border-box; */
-    /* padding-bottom: 20px; */
-  }
+  width: 80%;
+  margin: 0 auto;
+  padding-top: 10px;
+  height: 100% !important;
+  position: relative;
+}
 
-  .str-chat__message-input {
-    position: sticky !important;
-    bottom: 0 !important;
-    width: 100% !important;
+@media (max-width: 768px) {
+  .str-chat__channel {
+    width: 100%;
+    padding-top: 0;
   }
+}
 
-  @media (max-width: 768px) {
-    .str-chat__channel {
-      width: 100%;
-      padding-top: 0;
-    }
-  } 
+.str-chat__message-input {
+  position: sticky !important;
+  bottom: 0 !important;
+  width: 100% !important;
+}
 
-  .str-chat__message-textarea-container {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 4px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
+/* Stream Chat Message Input Styling */
+.str-chat__message-textarea-container {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border-primary) !important;
+  border-radius: var(--radius-xl) !important;
+  padding: 4px;
+  box-shadow: var(--shadow-md) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.str-chat__message-textarea-container:focus-within {
+  border-color: var(--color-border-focus) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-200) !important;
+}
+
+.dark .str-chat__message-textarea-container:focus-within {
+  box-shadow: 0 0 0 2px var(--color-primary-800) !important;
+}
+
+/* Stream Video Call Controls */
+.str-video__call-controls {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  bottom: 0;
+  backdrop-filter: blur(20px);
+  background-color: var(--str-video__call-controls-background);
+  border-top: 1px solid var(--str-video__participant-border-color);
+}
+
+/* Custom Call Controls (from CallScreen) */
+.custom-call-controls {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.custom-call-controls button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-lg);
+}
+
+.custom-call-controls button:hover {
+  transform: scale(1.05);
+}
+
+.custom-call-controls button:active {
+  transform: scale(0.95);
+}
+
+.custom-call-controls button.muted {
+  background-color: var(--color-danger-500) !important;
+}
+
+/* Stream Speaker Layout */
+.str-video__speaker-layout {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Participants Bar Positioning */
+.str-video__speaker-layout .str-video__speaker-layout__participants-bar-buttons-wrapper {
+  position: fixed;
+  bottom: 120px; /* Above call controls */
+  right: 16px;
+  z-index: 100;
+}
+
+/* Chat Header in ChatPage */
+.str-chat__channel-header {
+  background: var(--color-bg-secondary) !important;
+  border-bottom: 1px solid var(--color-border-primary) !important;
+}
+
+/* Thread Panel */
+.str-chat__thread {
+  background: var(--color-bg-secondary) !important;
+  border-left: 1px solid var(--color-border-primary) !important;
+}
+
+/* Message Bubbles - System/Call Request Messages */
+.str-chat__message[role="system"] .str-chat__message-text {
+  background: var(--color-bg-tertiary) !important;
+  color: var(--color-text-secondary) !important;
+  border-radius: var(--radius-xl) !important;
+  padding: 8px 16px !important;
+  max-width: 80% !important;
+  margin: 0 auto !important;
+}
+
+/* Focus visible for Stream components */
+.str-chat *:focus-visible,
+.str-video *:focus-visible {
+  outline: 2px solid var(--color-border-focus) !important;
+  outline-offset: 2px !important;
+}
+
+/* Reduced motion for Stream animations */
+@media (prefers-reduced-motion: reduce) {
+  .str-chat *,
+  .str-video * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
+}
 
-  .str-video__call-controls {
-    position: fixed;
-    left: 0;
-    right: 0;
-    z-index: 99;
-    bottom: 0;
-    /* background-color: #282828; */
-    backdrop-filter: blur(30px);
-    background-color: transparent;
-  }
+/* Scrollbar for Stream components */
+.str-chat ::-webkit-scrollbar,
+.str-video ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-  .str-video__speaker-layout {
-    position: relative;
-  }
+.str-chat ::-webkit-scrollbar-track,
+.str-video ::-webkit-scrollbar-track {
+  background: var(--color-bg-tertiary);
+}
 
-  .str-video__speaker-layout .str-video__speaker-layout__participants-bar-buttons-wrapper{
-    position: fixed;
-    bottom: 61px;
-    right: 0;
+.str-chat ::-webkit-scrollbar-thumb,
+.str-video ::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-400);
+  border-radius: var(--radius-full);
+}
+
+.str-chat ::-webkit-scrollbar-thumb:hover,
+.str-video ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-500);
+}
+
+/* Loading States */
+.loading-spinner {
+  border: 3px solid var(--color-border-primary);
+  border-top-color: var(--color-primary-500);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
+}
+
+/* Empty State for Stream components */
+.str-chat__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-12);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.str-chat__empty-state-icon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-4);
+}

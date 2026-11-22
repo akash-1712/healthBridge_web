@@ -1,134 +1,131 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import toast from "react-hot-toast";
-
-const env=import.meta.env.VITE_NODE_ENV;
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
+import AuthLayout from './ui/AuthLayout';
+import Input from './ui/Input';
+import Button from './ui/Button';
+import logoImg from '../assets/images/icon.png';
+import { buildApiUrl } from '../util/api';
 
 export default function Login() {
   const navigate = useNavigate();
   const { user, login } = useAuth();
 
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  useEffect(()=> {
-    if(user) navigate('/');
-  },[])
+  useEffect(() => {
+    if (user) navigate('/');
+  }, [user, navigate]);
 
   const handleChange = (e) => {
     const val = e.target.value.trim();
-    setForm({ ...form, [e.target.name]: val});
+    setForm({ ...form, [e.target.name]: val });
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: '' });
+    }
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!form.email) newErrors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Invalid email format';
+    if (!form.password) newErrors.password = 'Password is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.email || !form.password) {
-      toast.error("Please fill in all fields.");
-      return;
-    }
+    if (!validate()) return;
 
     setLoading(true);
 
     try {
-      const res = await fetch(`${env==="dev" ?'/api':'/backend'}/signin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(buildApiUrl('signin'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
 
-      if (!res.ok) throw new Error("Invalid email or password");
+      if (!res.ok) throw new Error('Invalid email or password');
 
       const resData = await res.json();
 
-      // Store token & user
-      localStorage.setItem("authToken", resData.authToken);
-      localStorage.setItem("user", JSON.stringify(resData.user));
-      localStorage.setItem("streamtoken", resData.token);
+      localStorage.setItem('authToken', resData.authToken);
+      localStorage.setItem('user', JSON.stringify(resData.user));
+      localStorage.setItem('streamtoken', resData.token);
 
-      // Update AuthContext
       login(resData.user, resData.authToken, resData.token);
 
-      toast.success("Login successful! Redirecting...");
-
-      // setTimeout(() => {
-        navigate("/");
-      // }, 1000);
+      toast.success('Login successful! Redirecting...');
+      navigate('/');
     } catch (err) {
-      toast.error(err.message || "Something went wrong.");
+      toast.error(err.message || 'Something went wrong.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[92vh] bg-gradient-to-b from-blue-50 to-white px-6">
-  <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
-    <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 text-center mb-8">
-      Welcome Back
-    </h2>
+    <AuthLayout
+      title="Welcome Back"
+      subtitle="Sign in to continue to HealthBridge"
+      illustration="👋"
+      logo={logoImg}
+      logoAlt="HealthBridge"
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Input
+          label="Email Address"
+          type="email"
+          name="email"
+          placeholder="you@example.com"
+          value={form.email}
+          onChange={handleChange}
+          error={errors.email}
+          required
+          autoComplete="email"
+          leftIcon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+        />
 
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <input
-        type="email"
-        name="email"
-        placeholder="Email Address"
-        value={form.email}
-        onChange={handleChange}
-        className="w-full px-5 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-        required
-        autoComplete="email"
-      />
+        <Input
+          label="Password"
+          type="password"
+          name="password"
+          placeholder="••••••••"
+          value={form.password}
+          onChange={handleChange}
+          error={errors.password}
+          required
+          autoComplete="current-password"
+          leftIcon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>}
+        />
 
-      <input
-        type="password"
-        name="password"
-        placeholder="Password"
-        value={form.password}
-        onChange={handleChange}
-        className="w-full px-5 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-        required
-        autoComplete="current-password"
-      />
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" className="w-4 h-4 rounded border-border-primary text-primary-600 focus:ring-primary-500" />
+            <span className="text-sm text-text-secondary">Remember me</span>
+          </label>
+          <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+            Forgot password?
+          </Link>
+        </div>
 
-      
+        <Button type="submit" fullWidth loading={loading} size="lg">
+          Log In
+        </Button>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 active:bg-blue-800 transition duration-200 flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
-      >
-        {loading ? (
-          <svg
-            className="animate-spin h-6 w-6 text-white cursor-not-allowed"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            ></path>
-          </svg>
-        ) : (
-          'Log In'
-        )}
-      </button>
-      <p className="text-right"><Link to='/forgot-password' className="text-blue-600">Forgot password?</Link></p>
-
-    </form>
-  </div>
-</div>
-
+        <p className="text-center text-sm text-text-secondary">
+          Don't have an account?{' '}
+          <Link to="/signup" className="text-primary-600 hover:text-primary-700 font-medium">
+            Sign Up
+          </Link>
+        </p>
+      </form>
+    </AuthLayout>
   );
 }

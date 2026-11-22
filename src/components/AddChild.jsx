@@ -1,17 +1,19 @@
-// src/components/AddChild.jsx
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-
-const env = import.meta.env.VITE_NODE_ENV;
+import PageLayout from './ui/PageLayout';
+import Card from './ui/Card';
+import Input from './ui/Input';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
+import { buildApiUrl } from '../util/api';
 
 export default function AddChild() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, token } = useAuth();
 
-  // Get userId from navigation state or use current user
   const userId = location.state?.userId || user?.id;
 
   const [loading, setLoading] = useState(false);
@@ -21,49 +23,40 @@ export default function AddChild() {
     weight: '',
     height: '',
     gender: 'male',
-    parent: userId
+    parent: userId,
   });
+  const [errors, setErrors] = useState({});
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: '' });
+    }
   };
 
   const handleGenderChange = (gender) => {
     setFormData(prev => ({
       ...prev,
-      gender: gender
+      gender,
     }));
   };
 
   const validateForm = () => {
+    const newErrors = {};
     const { name, age, weight, height, gender } = formData;
 
-    if (!name.trim()) {
-      toast.error('Name is required');
-      return false;
-    }
-    if (!age || isNaN(age) || age <= 0) {
-      toast.error('Please enter a valid age');
-      return false;
-    }
-    if (!weight || isNaN(weight) || weight <= 0) {
-      toast.error('Please enter a valid weight');
-      return false;
-    }
-    if (!height || isNaN(height) || height <= 0) {
-      toast.error('Please enter a valid height');
-      return false;
-    }
-    if (!gender) {
-      toast.error('Please select a gender');
-      return false;
-    }
+    if (!name.trim()) newErrors.name = 'Name is required';
+    if (!age || isNaN(age) || age <= 0 || age > 18) newErrors.age = 'Please enter a valid age (1-18)';
+    if (!weight || isNaN(weight) || weight <= 0) newErrors.weight = 'Please enter a valid weight';
+    if (!height || isNaN(height) || height <= 0) newErrors.height = 'Please enter a valid height';
+    if (!gender) newErrors.gender = 'Please select a gender';
 
-    return true;
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
@@ -75,13 +68,11 @@ export default function AddChild() {
 
     try {
       const response = await fetch(
-        `${env === "dev" ? '/api' : '/backend'}/addChild`,
+        buildApiUrl('addChild'),
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
         }
       );
 
@@ -107,153 +98,129 @@ export default function AddChild() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8"
-      style={{
-        backgroundImage: "url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?auto=format&fit=crop&w=2000&q=80&opacity=0.1')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      }}
-    >
-      <div className="container mx-auto px-4">
-        {/* Form Container */}
-        <div className="max-w-md mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            {/* Title */}
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <span className="text-2xl">👶</span>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-800">Add a Child</h1>
-              <p className="text-gray-600 mt-2">Enter your child's information</p>
+    <PageLayout>
+      <div className="max-w-xl mx-auto space-y-8">
+        {/* Header */}
+        <div>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/select-child')}>
+            ← Back to Select Child
+          </Button>
+          <div className="text-center mt-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-100 dark:bg-primary-900/30 mb-4">
+              <span className="text-3xl">👶</span>
             </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name Field */}
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-500 mb-2">
-                  Child's Name <span className='text-red-700 '>*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Enter child's name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  required
-                />
-              </div>
-
-              {/* Age Field */}
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-500 mb-2">
-                  Age (years) <span className='text-red-700 '>*</span>
-                </label>
-                <input
-                  type="number"
-                  name="age"
-                  value={formData.age}
-                  onChange={handleInputChange}
-                  placeholder="Enter age"
-                  min="1"
-                  max="18"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  required
-                />
-              </div>
-
-              {/* Weight and Height Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-group">
-                  <label className="block text-sm font-medium text-gray-500 mb-2">
-                    Weight (kg) <span className='text-red-700 '>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="weight"
-                    value={formData.weight}
-                    onChange={handleInputChange}
-                    placeholder="Weight"
-                    step="0.1"
-                    min="0"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="block text-sm font-medium text-gray-500 mb-2">
-                    Height (cm) <span className='text-red-700 '>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="height"
-                    value={formData.height}
-                    onChange={handleInputChange}
-                    placeholder="Height"
-                    min="1"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Gender Selection */}
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-500 mb-3">
-                  Gender <span className='text-red-700 '>*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div
-                    onClick={() => handleGenderChange('male')}
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition ${formData.gender === 'male'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                  >
-                    <div className="flex items-center space-x-3 overflow-hidden">
-                      <span className="text-sm md:text-md capitalize">Male</span>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => handleGenderChange('female')}
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition ${formData.gender === 'female'
-                        ? 'border-pink-500 bg-pink-50 text-pink-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                  >
-                    <div className="flex items-center space-x-3 overflow-hidden">
-                      <span className="text-sm md:text-md capitalize">Female</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition ${loading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'
-                  }`}
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Adding Child...</span>
-                  </div>
-                ) : (
-                  'Add Child'
-                )}
-              </button>
-            </form>
+            <h1 className="text-3xl font-bold text-text-primary">Add a Child</h1>
+            <p className="text-text-secondary mt-2">Enter your child's information</p>
           </div>
         </div>
+
+        {/* Form */}
+        <Card variant="elevated" padding="xl">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              label="Child's Name"
+              type="text"
+              name="name"
+              placeholder="Enter child's name"
+              value={formData.name}
+              onChange={handleInputChange}
+              error={errors.name}
+              required
+              autoComplete="name"
+              leftIcon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+            />
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Input
+                label="Age (years)"
+                type="number"
+                name="age"
+                placeholder="Age"
+                value={formData.age}
+                onChange={handleInputChange}
+                error={errors.age}
+                required
+                min="1"
+                max="18"
+                leftIcon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+              />
+
+              <Input
+                label="Weight (kg)"
+                type="number"
+                name="weight"
+                placeholder="Weight"
+                value={formData.weight}
+                onChange={handleInputChange}
+                error={errors.weight}
+                required
+                step="0.1"
+                min="0"
+                leftIcon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Input
+                label="Height (cm)"
+                type="number"
+                name="height"
+                placeholder="Height"
+                value={formData.height}
+                onChange={handleInputChange}
+                error={errors.height}
+                required
+                min="1"
+                leftIcon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>}
+              />
+
+              <div className="flex items-end">
+                <label className="block w-full text-sm font-medium text-text-secondary mb-2">
+                  Gender <span className="text-danger-500">*</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Gender Selection */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-3">
+                Gender <span className="text-danger-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Gender">
+                {[
+                  { value: 'male', label: 'Boy', icon: '👦', color: 'primary' },
+                  { value: 'female', label: 'Girl', icon: '👧', color: 'warning' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={formData.gender === option.value}
+                    onClick={() => handleGenderChange(option.value)}
+                    className={`
+                      flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all
+                      ${formData.gender === option.value
+                        ? `border-${option.color}-500 bg-${option.color}-50 text-${option.color}-700 dark:border-${option.color}-400 dark:bg-${option.color}-900/30 dark:text-${option.color}-300 shadow-md`
+                        : 'border-border-primary hover:border-primary-300 dark:hover:border-primary-600'
+                      }
+                    `}
+                  >
+                    <span className="text-2xl" aria-hidden="true">{option.icon}</span>
+                    <span className="font-medium capitalize">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+              {errors.gender && (
+                <p className="mt-2 text-sm text-danger-500" role="alert">{errors.gender}</p>
+              )}
+            </div>
+
+            <Button type="submit" fullWidth loading={loading} size="lg">
+              Add Child
+            </Button>
+          </form>
+        </Card>
       </div>
-    </div>
+    </PageLayout>
   );
 }

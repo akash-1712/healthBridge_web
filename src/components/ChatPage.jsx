@@ -1,7 +1,7 @@
 // src/components/ChatPage.jsx
-import React, { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { StreamChat } from "stream-chat";
+import React, { useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { StreamChat } from 'stream-chat';
 import {
   Chat,
   Channel,
@@ -9,18 +9,124 @@ import {
   MessageList,
   MessageInput,
   ChannelHeader,
-  Thread
-} from "stream-chat-react";
-import "stream-chat-react/dist/css/v2/index.css";
-import '../App.css';
+  Thread,
+  Message,
+} from 'stream-chat-react';
+import 'stream-chat-react/dist/css/v2/index.css';
 
-import { useAuth } from "../contexts/AuthContext";
-import toast from "react-hot-toast";
-import { getChatId } from "../../util/getChatId";
-import { formatDate } from "../../util/formatDate";
-import { useChat } from "../contexts/ChatContext";
+import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
+import { getChatId } from '../../util/getChatId';
+import { formatDate } from '../../util/formatDate';
+import { useChat } from '../contexts/ChatContext';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
+import Avatar from './ui/Avatar';
+import LoadingSpinner from './ui/LoadingSpinner';
+import { buildApiUrl } from '../util/api';
 
-const env = import.meta.env.VITE_NODE_ENV;
+// Custom Channel Header
+const CustomChannelHeader = () => (
+  <div className="flex items-center gap-3 px-4 py-3 border-b border-border-primary bg-bg-secondary">
+    <Avatar
+      name="Dr. Manju Dutta"
+      size="lg"
+      status="online"
+    >
+      👨‍⚕️
+    </Avatar>
+    <div className="flex-1 min-w-0">
+      <h2 className="font-semibold text-text-primary truncate">Dr. Manju Dutta</h2>
+      <div className="flex items-center gap-2 text-sm text-text-secondary">
+        <Badge variant="success" size="sm" dot>Online</Badge>
+        <span>Pediatrician</span>
+      </div>
+    </div>
+  </div>
+);
+
+// Custom Message Component
+const CustomMessage = ({ message, currentUserId }) => {
+  const isOwn = message.user?.id === currentUserId;
+  const isSystem = message.type === 'system' || message.customField === '123';
+
+  if (isSystem) {
+    return (
+      <div className="flex justify-center my-4">
+        <div className="bg-bg-tertiary rounded-xl px-4 py-2 max-w-[80%]">
+          <p className="text-sm text-text-secondary whitespace-pre-wrap text-center">
+            {message.text}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} my-2`}>
+      <div
+        className={`
+          max-w-[75%] rounded-2xl px-4 py-2
+          ${isOwn
+            ? 'bg-primary-600 text-white rounded-tr-sm'
+            : 'bg-bg-tertiary text-text-primary rounded-tl-sm'
+          }
+        `}
+      >
+        {!isOwn && (
+          <div className="text-xs text-text-muted mb-1 ml-1">
+            {message.user?.name || 'Unknown'}
+          </div>
+        )}
+        <p className="whitespace-pre-wrap">{message.text}</p>
+        <div className={`flex items-center gap-1 mt-1 text-xs ${isOwn ? 'justify-end text-primary-100' : 'justify-start text-text-muted'}`}>
+          <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          {isOwn && message.read_by && Object.keys(message.read_by).length > 0 && (
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Custom Message Input
+const CustomMessageInput = ({ channel }) => {
+  const [text, setText] = useState('');
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    await channel.sendMessage({ text });
+    setText('');
+  };
+
+  return (
+    <form onSubmit={handleSend} className="p-4 border-t border-border-primary bg-bg-secondary">
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type a message..."
+          className="flex-1 bg-bg-primary border border-border-primary rounded-xl px-4 py-3 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-border-focus focus:border-transparent"
+          disabled={!channel}
+        />
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          disabled={!text.trim() || !channel}
+          className="flex-shrink-0"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </Button>
+      </div>
+    </form>
+  );
+};
 
 export default function ChatPage() {
   let { channelId } = useParams();
@@ -33,23 +139,20 @@ export default function ChatPage() {
     symptomList = null,
     thermoReading = null,
     oxiReading = null,
-    callToDoctor = false
+    callToDoctor = false,
   } = location.state || {};
 
-  const {chatClient, setChatClient} = useChat();
-
+  const { chatClient, setChatClient } = useChat();
 
   const { user, streamtoken } = useAuth();
   const navigate = useNavigate();
-  // const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [requestingCall, setRequestingCall] = useState(false);
 
-  const [callTimer, setCallTimer] = useState(0); // Timer in seconds
+  const [callTimer, setCallTimer] = useState(0);
 
-  const checkLastCallRequestWithSearch = (ch) => {
-
+  const checkLastCallRequestWithSearch = () => {
     try {
       const savedTimestamp = localStorage.getItem('timer');
 
@@ -59,13 +162,12 @@ export default function ChatPage() {
 
       const lastRequestTime = parseInt(savedTimestamp, 10);
       const timePassed = Date.now() - lastRequestTime;
-      const fifteenMinutes = 15 * 60 * 1000; // 15 minutes in milliseconds
+      const fifteenMinutes = 15 * 60 * 1000;
       const remaining = fifteenMinutes - timePassed;
 
       if (remaining > 0) {
-        return Math.ceil(remaining / 1000); // Return remaining seconds
+        return Math.ceil(remaining / 1000);
       } else {
-        // Timer expired, clean up localStorage
         localStorage.removeItem('timer');
         return 0;
       }
@@ -75,10 +177,9 @@ export default function ChatPage() {
     }
   };
 
-  // Update timer - FIX: Use setCallTimer instead of setTimeLeft
-  const updateTimer = (ch) => {
-    const remaining = checkLastCallRequestWithSearch(ch);
-    setCallTimer(remaining); // FIXED: Use callTimer state
+  const updateTimer = () => {
+    const remaining = checkLastCallRequestWithSearch();
+    setCallTimer(remaining);
   };
 
   const saveCallRequestTimestamp = () => {
@@ -98,7 +199,6 @@ export default function ChatPage() {
     }
   };
 
-  // Add useEffect for countdown timer
   useEffect(() => {
     let interval = null;
 
@@ -107,7 +207,6 @@ export default function ChatPage() {
         setCallTimer(prev => {
           const newValue = prev - 1;
           if (newValue <= 0) {
-            // Timer finished, clean up localStorage
             clearCallRequestTimestamp();
             return 0;
           }
@@ -116,18 +215,14 @@ export default function ChatPage() {
       }, 1000);
     }
 
-    // Cleanup interval
     return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
+      if (interval) clearInterval(interval);
     };
   }, [callTimer]);
 
-  // Helper function to format timer (MM:SS)
   const formatTimer = (seconds) => {
     const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60; 
+    const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
@@ -137,61 +232,53 @@ export default function ChatPage() {
         navigate('/');
         return;
       }
-  
+
       try {
         setLoading(true);
-  
+
         let client = chatClient;
-  
-        // If no client in context, create and connect
+
         if (!client) {
           let key = null;
-          if (env === "dev") {
+          if (import.meta.env.VITE_NODE_ENV === 'dev') {
             key = import.meta.env.VITE_STREAM_CHAT_KEY;
           } else {
-            const keyResponse = await fetch(`/api/getStreamKey`, {
-              method: 'POST'
-            });
+            const keyResponse = await fetch(buildApiUrl('getStreamKey'), { method: 'POST' });
             const keyData = await keyResponse.json();
-  
+
             if (!keyResponse.ok) {
-              throw new Error(keyData.error || "Failed to fetch Stream key");
+              throw new Error(keyData.error || 'Failed to fetch Stream key');
             }
             key = keyData.key;
           }
-  
+
           client = StreamChat.getInstance(key);
-          
-          // Connect user
+
           await client.connectUser(
             { id: user.id, name: user.name },
             streamtoken
           );
-  
+
           setChatClient(client);
         } else {
-          // Client exists - check if user is connected
-          // KEY FIX: Check if THIS user is connected
           if (client.userID !== user.id) {
-            // Different user or not connected - reconnect
             if (client.userID) {
               await client.disconnectUser();
             }
-            
+
             await client.connectUser(
               { id: user.id, name: user.name },
               streamtoken
             );
           }
-          // If client.userID === user.id, user is already connected
         }
-  
-        // Now get the channel (user is definitely connected)
+
         const ch = client.channel('messaging', channelId);
         await ch.watch();
-  
+
         setChannel(ch);
-  
+        updateTimer();
+
       } catch (error) {
         console.error('Failed to initialize chat:', error);
         toast.error('Failed to load chat');
@@ -200,50 +287,35 @@ export default function ChatPage() {
         setLoading(false);
       }
     };
-  
+
     initializeChat();
-  
+
     return () => {
-      // Don't disconnect here - keep user connected for app
-      // Only disconnect when user logs out
+      // Keep user connected
     };
   }, [user, channelId, streamtoken, navigate]);
-  
 
   const requestCallToDoctor = async () => {
     if (!channel || !user) {
-      toast.error("Unable to send call request");
+      toast.error('Unable to send call request');
       return;
     }
 
     setRequestingCall(true);
 
     try {
-      // Send call request message in the current chat
-
       await channel.sendMessage({
-        customField: "123",
-        text: `Hello, Doctor! A consultation is requested with the following Child information: \n\n**Date:** ${formatDate(new Date())}\n\n**Child Information**
-       Name: ${childInfo?.name || 'N/A'}
-      Age: ${childInfo?.age || 'N/A'} years
-      Gender: ${childInfo?.gender || 'N/A'}
-      Weight: ${childInfo?.weight || 'N/A'} kg
-      Height: ${childInfo?.height || 'N/A'} cm
-      \n**Reported Symptoms**
-      ${Array.isArray(symptomList) ? symptomList.map(symptom => `${symptom}`).join('\n') : " None provided"}
-      \n**Thermometer Reading:** ${thermoReading || "N/A"} °C
-      **Oximeter Reading:** ${oxiReading || "N/A"} SpO₂
-      \nTeam HealthBridge`
+        customField: '123',
+        text: `Hello, Doctor! A consultation is requested with the following Child information: \n\n**Date:** ${formatDate(new Date())}\n\n**Child Information**\nName: ${childInfo?.name || 'N/A'}\nAge: ${childInfo?.age || 'N/A'} years\nGender: ${childInfo?.gender || 'N/A'}\nWeight: ${childInfo?.weight || 'N/A'} kg\nHeight: ${childInfo?.height || 'N/A'} cm\n\n**Reported Symptoms**\n${Array.isArray(symptomList) ? symptomList.map(symptom => `${symptom}`).join('\n') : ' None provided'}\n\n**Thermometer Reading:** ${thermoReading || 'N/A'} °C\n**Oximeter Reading:** ${oxiReading || 'N/A'} SpO₂\n\nTeam HealthBridge`,
       });
 
       saveCallRequestTimestamp();
       setCallTimer(15 * 60);
 
-      toast.success("Call request sent to doctor!");
-
+      toast.success('Call request sent to doctor!');
     } catch (error) {
-      console.error("Error requesting call:", error);
-      toast.error("Failed to request call. Please try again.");
+      console.error('Error requesting call:', error);
+      toast.error('Failed to request call. Please try again.');
     } finally {
       setRequestingCall(false);
     }
@@ -257,20 +329,18 @@ export default function ChatPage() {
     }
   };
 
-  // Scroll to bottom when chat loads and when new messages arrive
   useEffect(() => {
     if (chatClient && channel && !loading) {
-      // Scroll to bottom after chat is fully loaded
       setTimeout(scrollToBottom, 100);
     }
   }, [chatClient, channel, loading]);
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center bg-bg-primary">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p>Loading chat...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-3 border-primary-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-text-secondary">Loading chat...</p>
         </div>
       </div>
     );
@@ -278,71 +348,70 @@ export default function ChatPage() {
 
   if (!chatClient || !channel) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center bg-bg-primary">
         <div className="text-center">
-          <p>Chat not available</p>
-          <button
-            onClick={() => navigate('/')}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-          >
-            Go Home
-          </button>
+          <p className="text-text-secondary mb-4">Chat not available</p>
+          <Button onClick={() => navigate('/')}>Go Home</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-[88vh] md:h-[91vh] lg:h-[90vh] flex flex-col overflow-y-scroll">
-      {/* Header with back button */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 sm:ml-0 sticky top-0 z-40 w-full">
-        <button
-          onClick={() => navigate('/')}
-          className="text-blue-500 hover:text-blue-700 text-lg flex items-center gap-1 md:ml-[150px] ml-0"
-        >
-          ← <span className="hidden md:inline">Back to Home</span>
-        </button>
-        <h1 className="md:text-3xl text-xl font-bold text-blue-900 text-center flex-end">
-                  Dr. Manju Dutta
-                </h1>
-        {callToDoctor && <button
-          onClick={requestCallToDoctor}
-          disabled={requestingCall || callTimer > 0}
-          className={`px-4 py-2 rounded-lg transition font-semibold ${requestingCall || callTimer > 0
-              ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
-              : 'bg-green-400 text-white hover:bg-green-600'
-            }`}
-        >
-          {requestingCall ? (
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              Requesting...
-            </div>
-          ) : callTimer > 0 ? (
-            <div className="flex items-center gap-2">
-              <span>⏱️</span>
-              <span className="md:inline hidden">Request Again in: </span>
-              <span>{formatTimer(callTimer)}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span>📞</span>
-              <span className="hidden md:inline">Request Call</span>
-            </div>
+    <div className="h-screen flex flex-col bg-bg-primary">
+      {/* Custom Header */}
+      <div className="sticky top-0 z-40 bg-bg-secondary/95 backdrop-blur-md border-b border-border-primary">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/')}
+            className="flex-shrink-0"
+          >
+            ← Back
+          </Button>
+
+          <CustomChannelHeader channel={channel} />
+
+          {callToDoctor && (
+            <Button
+              variant={requestingCall || callTimer > 0 ? 'outline' : 'success'}
+              size="sm"
+              onClick={requestCallToDoctor}
+              disabled={requestingCall || callTimer > 0}
+              className="flex-shrink-0"
+            >
+              {requestingCall ? (
+                <>
+                  <LoadingSpinner size="sm" color="white" className="mr-2" />
+                  Requesting...
+                </>
+              ) : callTimer > 0 ? (
+                <>
+                  <span className="mr-2">⏱️</span>
+                  {formatTimer(callTimer)}
+                </>
+              ) : (
+                <>
+                  <span className="mr-2">📞</span>
+                  Request Call
+                </>
+              )}
+            </Button>
           )}
-        </button>}
+        </div>
       </div>
 
-
-
       {/* Chat UI */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-hidden">
         <Chat client={chatClient} theme="messaging light">
           <Channel channel={channel}>
             <Window>
-              <ChannelHeader />
-              <MessageList />
-              <MessageInput />
+              <ChannelHeader Component={CustomChannelHeader} />
+              <MessageList>
+                <Message Component={CustomMessage} />
+              </MessageList>
+              <MessageInput Component={CustomMessageInput} />
             </Window>
             <Thread />
           </Channel>

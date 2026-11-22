@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import Button from './ui/Button';
+import Card from './ui/Card';
+import LoadingSpinner from './ui/LoadingSpinner';
+import Badge from './ui/Badge';
 
 const PaymentProcessing = ({ paymentData, onBack, onMainBack }) => {
   const [processingStatus, setProcessingStatus] = useState('creating');
@@ -109,55 +113,6 @@ const PaymentProcessing = ({ paymentData, onBack, onMainBack }) => {
     }
   };
 
-  const startRealPaymentMonitoring = (orderId) => {
-    // Real payment status monitoring
-    const checkPaymentStatus = async () => {
-      try {
-        // Call QROPAY status check API
-        const statusResponse = await fetch(`https://api.qropay.com/v1/payment-status/${orderId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${QROPAY_API_KEY}`,
-            'Content-Type': 'application/json',
-          }
-        });
-
-        if (statusResponse.ok) {
-          const statusResult = await statusResponse.json();
-          
-          if (statusResult.status === 'success' || statusResult.status === 'completed') {
-            console.log('🎉 Real payment completed:', statusResult);
-            setProcessingStatus('completed');
-            return;
-          } else if (statusResult.status === 'failed') {
-            console.log('❌ Payment failed:', statusResult);
-            setProcessingStatus('failed');
-            setError('Payment was declined or failed');
-            return;
-          }
-        }
-        
-        // Continue monitoring if status is still pending
-        setTimeout(checkPaymentStatus, 3000);
-      } catch (error) {
-        console.error('Status check error:', error);
-        // Continue monitoring despite errors
-        setTimeout(checkPaymentStatus, 5000);
-      }
-    };
-
-    // Start monitoring after 3 seconds
-    setTimeout(checkPaymentStatus, 3000);
-    
-    // Set timeout for payment expiry (15 minutes)
-    setTimeout(() => {
-      if (processingStatus === 'awaiting') {
-        setProcessingStatus('failed');
-        setError('Payment session expired. Please try again.');
-      }
-    }, 15 * 60 * 1000);
-  };
-
   const handleRetryPayment = () => {
     setError('');
     initiateRealPayment();
@@ -174,30 +129,32 @@ const PaymentProcessing = ({ paymentData, onBack, onMainBack }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden min-h-[500px]">
-      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-purple-700 text-white p-6 relative">
-        <button 
-          onClick={onBack} 
-          className="absolute left-5 top-1/2 -translate-y-1/2 bg-white/20 text-white border-none px-4 py-2 rounded-lg cursor-pointer text-sm hover:bg-white/30 transition-colors"
+    <Card variant="elevated" padding="none" className="max-w-2xl mx-auto overflow-hidden min-h-[500px]">
+      <div className="bg-gradient-to-r from-primary-600 via-primary-700 to-primary-900 text-white p-6 relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="absolute left-5 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
         >
           ← Back to Form
-        </button>
+        </Button>
         <h2 className="text-2xl font-bold text-center">🔐 Payment Processing</h2>
       </div>
 
       {processingStatus === 'creating' && (
         <div className="p-16 text-center">
-          <div className="w-16 h-16 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin mx-auto mb-8"></div>
-          <h3 className="text-xl font-semibold mb-4 text-gray-800">Creating Secure Payment</h3>
-          <p className="text-gray-600 mb-8">Connecting to QROPAY servers...</p>
-          <div className="bg-gray-50 rounded-xl p-6 max-w-md mx-auto">
+          <LoadingSpinner size="xl" color="primary" className="mx-auto mb-8" />
+          <h3 className="text-xl font-semibold mb-4 text-text-primary">Creating Secure Payment</h3>
+          <p className="text-text-secondary mb-8">Connecting to QROPAY servers...</p>
+          <div className="bg-bg-tertiary dark:bg-neutral-800 rounded-xl p-6 max-w-md mx-auto">
             <div className="flex justify-between items-center mb-4">
-              <span className="font-semibold text-gray-600">Amount:</span>
-              <span className="text-gray-800 font-bold">₹{paymentData.amount}</span>
+              <span className="font-semibold text-text-secondary">Amount:</span>
+              <span className="text-text-primary font-bold">₹{paymentData.amount}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="font-semibold text-gray-600">Description:</span>
-              <span className="text-gray-800">{paymentData.description}</span>
+              <span className="font-semibold text-text-secondary">Description:</span>
+              <span className="text-text-primary">{paymentData.description}</span>
             </div>
           </div>
         </div>
@@ -251,12 +208,13 @@ const PaymentProcessing = ({ paymentData, onBack, onMainBack }) => {
           </div>
 
           <div className="text-center my-8">
-            <button 
-              onClick={openPaymentLink} 
-              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/25"
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={openPaymentLink}
             >
               🌐 Open Payment Page
-            </button>
+            </Button>
           </div>
 
           <div className="bg-gray-50 rounded-xl p-6 text-center mt-8">
@@ -299,37 +257,40 @@ const PaymentProcessing = ({ paymentData, onBack, onMainBack }) => {
               </div>
             </div>
           </div>
-          <button 
-            onClick={handleNewPayment} 
-            className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-green-500/25"
+          <Button
+            variant="success"
+            size="lg"
+            onClick={handleNewPayment}
           >
             🔄 Make Another Payment
-          </button>
+          </Button>
         </div>
       )}
 
       {processingStatus === 'failed' && (
         <div className="p-16 text-center">
           <div className="text-6xl mb-6">❌</div>
-          <h2 className="text-2xl font-bold text-red-600 mb-6">Payment Failed</h2>
-          <p className="text-gray-600 my-6 max-w-md mx-auto">{error}</p>
+          <h2 className="text-2xl font-bold text-danger-600 mb-6">Payment Failed</h2>
+          <p className="text-text-secondary my-6 max-w-md mx-auto">{error}</p>
           <div className="mt-8 space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
-            <button 
-              onClick={handleRetryPayment} 
-              className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-green-500/25"
+            <Button
+              variant="success"
+              size="lg"
+              onClick={handleRetryPayment}
             >
               🔄 Retry Payment
-            </button>
-            <button 
-              onClick={onBack} 
-              className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/25"
+            </Button>
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={onBack}
             >
               ← Back to Form
-            </button>
+            </Button>
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 

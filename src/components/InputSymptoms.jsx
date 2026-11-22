@@ -1,45 +1,33 @@
-// src/components/InputSymptoms.jsx
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { StreamChat } from 'stream-chat';
 import toast from 'react-hot-toast';
 import { getChatId } from '../../util/getChatId';
-
-import vomitImg from "../assets/images/vomit.jpeg";
-import eatingChalkImg from "../assets/images/eating_chalk.jpeg";
-import bedWettingImg from "../assets/images/bed_wetting.jpeg";
-import looseMotionsImg from "../assets/images/loose_motions.jpeg";
-import skinAllergyImg from "../assets/images/skin_allergy.jpeg";
-import soreThroatImg from "../assets/images/sore_throat.jpeg";
-import earPainImg from "../assets/images/ear_pain.jpeg";
-import stomachPainImg from "../assets/images/stomach_pain.jpeg";
-import eyeInfectionImg from "../assets/images/eye_infection.jpeg";
-import coldCoughImg from "../assets/images/cold_cough.jpeg";
-import feverImg from "../assets/images/fever.jpeg";
-import bloatingImg from "../assets/images/bloating.jpeg";
-import mumpsImg from "../assets/images/mumps.jpeg";
-import iconImg from "../assets/images/icon.png";
 import { useChat } from '../contexts/ChatContext';
+import PageLayout from './ui/PageLayout';
+import Card from './ui/Card';
+import Input from './ui/Input';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
+import { buildApiUrl } from '../util/api';
 
-const env = import.meta.env.VITE_NODE_ENV;
-
-// Symptom data with emojis
+// Symptom data with emojis (replacing images with emojis for better performance)
 const symptomData = [
-  { id: "1", name: "Vomit", isSelected: false, img: vomitImg },
-  { id: "2", name: "Pica(Eating chalk)", isSelected: false, img: eatingChalkImg },
-  { id: "3", name: "Bed wetting", isSelected: false, img: bedWettingImg },
-  { id: "4", name: "Loose motions", isSelected: false, img: looseMotionsImg },
-  { id: "5", name: "Skin allergy", isSelected: false, img: skinAllergyImg },
-  { id: "6", name: "Sore throat", isSelected: false, img:soreThroatImg },
-  { id: "7", name: "Ear pain", isSelected: false,img : earPainImg },
-  { id: "8", name: "Stomach pain", isSelected: false, img: stomachPainImg},
-  { id: "9", name: "Eye allergy", isSelected: false, img:eyeInfectionImg },
-  { id: "10", name: "Cold cough", isSelected: false, img:coldCoughImg },
-  { id: "11", name: "Fever", isSelected: false, img: feverImg},
-  { id: "12", name: "Bloating", isSelected: false, img:bloatingImg },
-  { id: "13", name: "Mumps", isSelected: false, img: mumpsImg },
-  { id: "14", name: "Other", isSelected: false, img: iconImg },
+  { id: "1", name: "Vomit", emoji: "🤮" },
+  { id: "2", name: "Pica (Eating chalk)", emoji: "🪨" },
+  { id: "3", name: "Bed wetting", emoji: "🛏️💧" },
+  { id: "4", name: "Loose motions", emoji: "💩" },
+  { id: "5", name: "Skin allergy", emoji: "🔴🩹" },
+  { id: "6", name: "Sore throat", emoji: "😣👄" },
+  { id: "7", name: "Ear pain", emoji: "👂💥" },
+  { id: "8", name: "Stomach pain", emoji: "🤕🤲" },
+  { id: "9", name: "Eye allergy", emoji: "👁️💧" },
+  { id: "10", name: "Cold cough", emoji: "🤧😷" },
+  { id: "11", name: "Fever", emoji: "🌡️🔥" },
+  { id: "12", name: "Bloating", emoji: "🎈😟" },
+  { id: "13", name: "Mumps", emoji: "🦠😶" },
+  { id: "14", name: "Other", emoji: "❓" },
 ];
 
 export default function InputSymptoms() {
@@ -47,11 +35,11 @@ export default function InputSymptoms() {
   const location = useLocation();
   const { user, streamtoken } = useAuth();
 
-  const {setChatClient} = useChat();
-  
+  const { setChatClient } = useChat();
+
   // Get data from navigation state
   const { userId, childId, childInfo } = location.state || {};
-  
+
   // State management
   const [symptoms, setSymptoms] = useState(symptomData);
   const [thermoReading, setThermoReading] = useState('');
@@ -70,20 +58,21 @@ export default function InputSymptoms() {
     return symptoms.filter(symptom => symptom.isSelected).map(symptom => symptom.name);
   };
 
-  // Submit details and navigate to chat
-  const sendDetails = async () => {
+  const validate = () => {
     const selectedSymptoms = getSelectedSymptoms();
-    
+
     if (selectedSymptoms.length === 0) {
       toast.error('Please select at least one symptom');
-      return;
+      return false;
     }
+    return true;
+  };
 
-    // if (!thermoReading || !oxiReading) {
-    //   toast.error('Please provide all readings');
-    //   return;
-    // }
+  // Submit details and navigate to chat
+  const sendDetails = async () => {
+    if (!validate()) return;
 
+    const selectedSymptoms = getSelectedSymptoms();
     setLoading(true);
 
     try {
@@ -92,18 +81,16 @@ export default function InputSymptoms() {
         userId: userId || user.id,
         childId,
         symptomList: selectedSymptoms,
-        thermoReading:thermoReading || 'N/A',
-        oxiReading:oxiReading || 'N/A',
+        thermoReading: thermoReading || 'N/A',
+        oxiReading: oxiReading || 'N/A',
       };
 
       const response = await fetch(
-        `${env === "dev" ? '/api' : '/backend'}/bookAppointment`,
+        buildApiUrl('bookAppointment'),
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(appointmentData)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(appointmentData),
         }
       );
 
@@ -116,10 +103,10 @@ export default function InputSymptoms() {
 
       // Get Stream key
       let key = null;
-      if (env === "dev") {
+      if (import.meta.env.VITE_NODE_ENV === 'dev') {
         key = import.meta.env.VITE_STREAM_CHAT_KEY;
       } else {
-        const keyResponse = await fetch('/api/getStreamKey', { method: 'POST' });
+        const keyResponse = await fetch(buildApiUrl('getStreamKey'), { method: 'POST' });
         const keyData = await keyResponse.json();
         if (!keyResponse.ok) throw new Error(keyData.error);
         key = keyData.key;
@@ -136,18 +123,18 @@ export default function InputSymptoms() {
 
       // Get doctor data
       const doctorResponse = await fetch(
-        `${env === "dev" ? '/api' : '/backend'}/getDoctorId`,
+        buildApiUrl('getDoctorId'),
         {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         }
       );
       const doctorData = await doctorResponse.json();
 
-    // Create or get channel
+      // Create or get channel
       const channel = chatClient.channel('messaging', {
         members: [user.id, doctorData.doctorId],
-        name:user.name // Add actual doctor ID
+        name: user.name,
       });
 
       await channel.watch();
@@ -158,8 +145,8 @@ export default function InputSymptoms() {
           thermoReading,
           oxiReading,
           callToDoctor: true,
-          childInfo
-        }
+          childInfo,
+        },
       });
 
     } catch (error) {
@@ -175,157 +162,140 @@ export default function InputSymptoms() {
     return null;
   }
 
+  const selectedSymptoms = getSelectedSymptoms();
+
   return (
-    <div 
-      className="min-h-screen bg-gradient-to-b from-blue-50 to-white"
-      style={{
-        backgroundImage: "url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?auto=format&fit=crop&w=2000&q=80&opacity=0.1')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      }}
-    >
-    <div className="sticky top-26 z-40 bg-white border-b border-gray-200 shadow-sm md:hidden pl-2">
-      <div className="container px-4 py-4">
-        <div className="max-w-4xl">
-          <div className="flex items-center gap-[17px] relative">
-            {/* Left aligned button */}
-            <button
-          onClick={() => navigate('/select-child')}
-          className="text-blue-500 hover:text-blue-700 flex items-center justify-center text-3xl h-8 w-8"
-          style={{ transform: 'translateY(-5px)' }}
-        >
-          ←
-        </button>
-
-            {/* Centered heading */}
-            <h1 className="text-xl font-bold text-blue-900 text-left">
-              Medical Consultation
-            </h1>
+    <PageLayout>
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/select-child')}>
+              ← Back to Select Child
+            </Button>
+            <h1 className="text-3xl font-bold text-text-primary mt-2">Medical Consultation</h1>
+            <p className="text-text-secondary mt-1">
+              {childInfo?.name ? `For ${childInfo.name}` : 'Enter symptoms and health readings'}
+            </p>
           </div>
         </div>
-      </div>
-    </div>
-      <div className="container mx-auto px-4">
 
-        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8">
-        <div className="hidden md:flex items-center justify-center mb-8 relative">
-                {/* Left aligned button */}
-                <div className="absolute left-0">
-                  <button
-                    onClick={() => navigate('/select-child')}
-                    className="text-blue-500 hover:text-blue-700 text-lg flex items-center gap-1"
-                  >
-                    ← <span className="hidden md:inline">Back to Select Child</span>
-                  </button>
-                </div>
-
-                {/* Centered heading */}
-                <h1 className="text-3xl font-bold text-blue-900 mx-auto">
-                Medical Consultation
-                </h1>
+        {/* Child Info Card */}
+        {childInfo && (
+          <Card variant="default" padding="md" className="bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-2xl">
+                {childInfo.gender === 'female' ? '👧' : '👦'}
               </div>
-          
-          {/* Symptoms Section */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Select Symptoms</h2>
-            
-            {/* Symptoms Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
-              {symptoms.map((symptom, index) => (
-                <div
-                  key={symptom.id}
-                  onClick={() => toggleSymptom(index)}
-                  className={`p-4 rounded-xl border-2 cursor-pointer transition ${
-                    symptom.isSelected
-                      ? 'border-green-500 bg-green-50 shadow-md'
-                      : 'border-gray-300 hover:border-gray-400 bg-white'
-                  }`}
-                >
-                  <div className="text-center">
-                    <div className="text-2xl mb-2">
-                      <img src={symptom.img} alt={symptom.name}/>
-                    </div>
-                    <p className={`text-xs font-medium ${
-                      symptom.isSelected ? 'text-green-700' : 'text-gray-700'
-                    }`}>
-                      {symptom.name}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Selected Symptoms Display */}
-            {getSelectedSymptoms().length > 0 && (
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-blue-800 mb-2">Selected Symptoms:</h3>
-                <p className="text-blue-700">{getSelectedSymptoms().join(', ')}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Readings Section */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Health Readings</h2>
-            
-            <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🌡️ Thermometer Reading (°C)
-                </label>
-                <input
-                  type="number"
-                  value={thermoReading}
-                  onChange={(e) => setThermoReading(e.target.value)}
-                  placeholder="Enter temperature"
-                  step="0.1"
-                  min="30"
-                  max="45"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🫁 Oximeter Reading (SpO2)
-                </label>
-                <input
-                  type="number"
-                  value={oxiReading}
-                  onChange={(e) => setOxiReading(e.target.value)}
-                  placeholder="Enter SpO2 level"
-                  min="70"
-                  max="100"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                />
+                <p className="font-semibold text-text-primary">{childInfo.name}</p>
+                <p className="text-sm text-text-secondary">
+                  {childInfo.age ? `Age: ${childInfo.age} years` : ''}
+                  {childInfo.gender && childInfo.age ? ' • ' : ''}
+                  {childInfo.gender ? (childInfo.gender === 'female' ? 'Girl' : 'Boy') : ''}
+                </p>
               </div>
             </div>
+          </Card>
+        )}
+
+        {/* Symptoms Section */}
+        <Card variant="elevated" padding="lg">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-text-primary mb-2">Select Symptoms</h2>
+            <p className="text-text-secondary text-sm">Tap to select all that apply</p>
           </div>
 
-          {/* Send Details Button */}
-          <div className="text-center">
-            <button
-              onClick={sendDetails}
-              disabled={loading}
-              className={`px-8 py-4 rounded-lg font-semibold text-white transition ${
-                loading
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-green-500 hover:bg-green-600 active:bg-green-700'
-              }`}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Sending Details...</span>
-                </div>
-              ) : (
-                'Send Details to Doctor'
-              )}
-            </button>
+          {/* Symptoms Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+            {symptoms.map((symptom, index) => (
+              <button
+                key={symptom.id}
+                type="button"
+                onClick={() => toggleSymptom(index)}
+                className={`
+                  flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all
+                  ${symptom.isSelected
+                    ? 'border-success-500 bg-success-50 dark:bg-success-900/20 shadow-md'
+                    : 'border-border-primary hover:border-primary-300 dark:hover:border-primary-600'
+                  }
+                `}
+                aria-pressed={symptom.isSelected}
+              >
+                <span className="text-3xl" aria-hidden="true">{symptom.emoji}</span>
+                <span className={`text-sm font-medium text-center ${symptom.isSelected ? 'text-success-700 dark:text-success-300' : 'text-text-secondary'}`}>
+                  {symptom.name}
+                </span>
+              </button>
+            ))}
           </div>
 
+          {/* Selected Symptoms Display */}
+          {selectedSymptoms.length > 0 && (
+            <div className="bg-bg-tertiary rounded-xl p-4">
+              <h3 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                <Badge variant="success" size="sm" dot>Selected</Badge>
+                Selected Symptoms:
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {selectedSymptoms.map((symptom, i) => (
+                  <Badge key={i} variant="info" size="sm">
+                    {symptom}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Readings Section */}
+        <Card variant="elevated" padding="lg">
+          <h2 className="text-xl font-semibold text-text-primary mb-6">Health Readings</h2>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <Input
+              label="Thermometer Reading (°C)"
+              type="number"
+              name="thermoReading"
+              placeholder="Enter temperature"
+              value={thermoReading}
+              onChange={(e) => setThermoReading(e.target.value)}
+              step="0.1"
+              min="30"
+              max="45"
+              leftIcon={<span className="text-xl" aria-hidden="true">🌡️</span>}
+              helperText="Normal range: 36.1°C - 37.2°C"
+            />
+
+            <Input
+              label="Oximeter Reading (SpO₂)"
+              type="number"
+              name="oxiReading"
+              placeholder="Enter SpO₂ level"
+              value={oxiReading}
+              onChange={(e) => setOxiReading(e.target.value)}
+              min="70"
+              max="100"
+              leftIcon={<span className="text-xl" aria-hidden="true">🫁</span>}
+              helperText="Normal range: 95% - 100%"
+            />
+          </div>
+        </Card>
+
+        {/* Send Details Button */}
+        <div className="flex justify-center">
+          <Button
+            variant="success"
+            size="xl"
+            fullWidth={false}
+            onClick={sendDetails}
+            disabled={loading}
+            className="min-w-[280px]"
+          >
+            {loading ? 'Sending Details...' : 'Send Details to Doctor'}
+          </Button>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }

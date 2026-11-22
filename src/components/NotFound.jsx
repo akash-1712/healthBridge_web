@@ -1,44 +1,42 @@
 // src/components/NotFound.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from './ui/Button';
+import Card from './ui/Card';
 
 export default function NotFound() {
   const navigate = useNavigate();
 
   return (
-    <div className="h-[88vh] bg-gradient-to-b from-blue-50 to-white flex items-center justify-center px-4">
+    <div className="h-[88vh] bg-bg-primary flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
-        {/* 404 Illustration - Reduced spacing */}
+        {/* 404 Illustration */}
         <div className="mb-6">
-          <div className="text-7xl lg:text-8xl font-bold text-blue-200 mb-2">404</div>
-          <div className="text-4xl mb-4">🏥</div>
+          <div className="text-7xl lg:text-8xl font-bold text-primary-200 dark:text-primary-900 mb-2">404</div>
+          <div className="text-4xl mb-4" aria-hidden="true">🏥</div>
         </div>
 
-        {/* Error Message - Compact */}
-        <div className="bg-white rounded-3xl shadow-xl p-6 mb-4">
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-3">
+        {/* Error Message */}
+        <Card variant="elevated" padding="lg" className="mb-4">
+          <h1 className="text-2xl lg:text-3xl font-bold text-text-primary mb-3">
             Page Not Found
           </h1>
-          <p className="text-base lg:text-lg text-gray-600 mb-5">
-            Oops! The page you're looking for seems to have gone for a check-up. 
+          <p className="text-base lg:text-lg text-text-secondary mb-5">
+            Oops! The page you're looking for seems to have gone for a check-up.
             Let's get you back to safety.
           </p>
 
-          {/* Action Button - Single button for cleaner look */}
-          <button
-            onClick={() => navigate(-1)}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
-          >
+          <Button onClick={() => navigate(-1)} fullWidth size="lg">
             ← Go Back
-          </button>
-        </div>
+          </Button>
+        </Card>
 
-        {/* Help Text - Compact */}
-        <p className="text-sm text-gray-500">
-          Need immediate medical assistance? 
+        {/* Help Text */}
+        <p className="text-sm text-text-muted">
+          Need immediate medical assistance?
           <button
             onClick={() => navigate('/')}
-            className="text-blue-600 hover:text-blue-800 font-semibold ml-1 underline"
+            className="text-primary-600 hover:text-primary-700 font-medium ml-1 underline"
           >
             Start consultation
           </button>

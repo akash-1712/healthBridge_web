@@ -8,175 +8,20 @@ import {
   CallControls,
   SpeakerLayout,
   useStreamVideoClient,
-  useCall,
   StreamTheme,
   ToggleAudioPublishingButton,
   ToggleVideoPublishingButton,
   ScreenShareButton,
   CancelCallButton,
   RecordCallButton,
-  PaginatedGridLayout,
+  ParticipantView,
 } from '@stream-io/video-react-sdk';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
-import '../App.css'
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-// import { EmojiPicker } from 'stream-chat-react/emojis';
-
-const CustomTopView = () => {
-  const { useParticipants } = useCallStateHooks();
-  const participants = useParticipants();
-
-  return (
-    <div style={{
-      width: '75%',
-      position: 'absolute',
-      left: '25%',
-      top: 10,
-      height: 50,
-      backgroundColor: 'rgba(3, 51, 193, 0.48)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 10,
-      borderRadius: 6,
-      border: '2px solid white'
-    }}>
-      <p style={{
-        color: 'white',
-        fontSize: 14,
-        padding: 10,
-        margin: 0,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap'
-      }}>
-        {participants.length} participant{participants.length > 1 ? 's' : ''} in the Video Call
-      </p>
-    </div>
-  );
-};
-
-const CustomCallControls = (props) => {
-  const call = useCall();
-  const { useMicrophoneState, useCameraState } = useCallStateHooks();
-  
-  // Get microphone state
-  const { microphone, isMute: isMicMuted } = useMicrophoneState();
-  
-  // Get camera state  
-  const { camera, isMute: isCameraMuted } = useCameraState();
-
-  const reactions = [
-    { type: 'reaction', emoji_code: ':smile:', icon: '😊' },
-    { type: 'raised-hand', emoji_code: ':raise-hand:', icon: '✋' },
-    { type: 'reaction', emoji_code: ':fireworks:', icon: '🎉' },
-    { type: 'reaction', emoji_code: ':like:', icon: '😍' }
-  ];
-
-  const sendReaction = (reaction) => {
-    call?.sendReaction({
-      type: reaction.type,
-      emoji_code: reaction.emoji_code,
-      custom: {},
-      icon: reaction.icon
-    });
-  };
-
-  return (
-    <div style={{
-      position: 'absolute',
-      left: 10,
-      top: 80,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10,
-      padding: '10px 20px',
-      backgroundColor: 'rgba(3, 51, 193, 0.48)',
-      borderRadius: 6,
-      border: '2px solid white',
-      zIndex: 555
-    }}>
-
-<button
-        onClick={() => microphone.toggle()}
-        style={{
-          ...styles.controlButton,
-          backgroundColor: isMicMuted ? '#ef4444' : '#22c55e'
-        }}
-        title={isMicMuted ? 'Unmute' : 'Mute'}
-      >
-        {isMicMuted ? '🔇' : '🎤'}
-      </button>
-
-      {/* Custom Video Toggle Button */}
-      <button
-        onClick={() => camera.toggle()}
-        style={{
-          ...styles.controlButton,
-          backgroundColor: isCameraMuted ? '#ef4444' : '#22c55e'
-        }}
-        title={isCameraMuted ? 'On Camera' : 'Off Camera'}
-      >
-        {isCameraMuted ? '📹' : '📷'}
-      </button>
-      {/* Stream's built-in call controls */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <CallControls onLeave={props.onHangupCallHandler} />
-      </div>
-      
-      {/* Custom reaction buttons */}
-      <div style={{ display: 'flex', gap: 5 }}>
-        {reactions.map((reaction, index) => (
-          <button
-            key={index}
-            onClick={() => sendReaction(reaction)}
-            style={{
-              backgroundColor: 'transparent',
-              border: '1px solid white',
-              borderRadius: 4,
-              padding: '5px 10px',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: 16
-            }}
-            title={reaction.emoji_code}
-          >
-            {reaction.icon}
-          </button>
-        ))}
-      </div>
-
-      {/* Custom End Call Button */}
-      <button
-        onClick={props.onHangupCallHandler}
-        style={{
-          backgroundColor: '#ef4444',
-          border: 'none',
-          borderRadius: 20,
-          padding: '10px 20px',
-          color: 'white',
-          cursor: 'pointer',
-          fontWeight: 'bold'
-        }}
-      >
-        End Call
-      </button>
-    </div>
-  );
-};
-
-
-export const VerticalCallControls = ({ onLeave }) => (
-  <div className="flex items-center space-y-10">
-    <ToggleAudioPublishingButton />
-    <ToggleVideoPublishingButton />
-    <ScreenShareButton />
-    <RecordCallButton/>
-    <CancelCallButton onClick={onLeave} />
-  </div>
-);
-
+import Button from './ui/Button';
+import Avatar from './ui/Avatar';
+import Badge from './ui/Badge';
 
 const CallScreen = () => {
   const calls = useCalls();
@@ -184,14 +29,14 @@ const CallScreen = () => {
   const navigate = useNavigate();
 
   const handleLeaveCall = async () => {
-      try {
-        if (call?.state?.callingState !== 'left') {
+    try {
+      if (call?.state?.callingState !== 'left') {
         await call.leave();
-        }
-        
-      } catch (error) {
-        toast.error("Call can't be left");       
       }
+      navigate('/');
+    } catch {
+      toast.error("Call can't be left");
+    }
   };
 
   if (!call) {
@@ -199,78 +44,217 @@ const CallScreen = () => {
     return null;
   }
 
-  const ActiveCallScreen = ({handleLeaveCall})=> {
-    const {useCallCallingState} = useCallStateHooks();
+  const ActiveCallScreen = ({ handleLeaveCall }) => {
+    const { useCallCallingState, useParticipants, useMicrophoneState, useCameraState } = useCallStateHooks();
     const client = useStreamVideoClient();
     const callingState = useCallCallingState();
+    const participants = useParticipants();
+    const { microphone, isMute: isMicMuted } = useMicrophoneState();
+    const { camera, isMute: isCameraMuted } = useCameraState();
 
     useEffect(() => {
       const unsubscribe = client.on('all', (event) => {
         if (event.type === 'call.session_participant_joined') {
           const participant = event.participant;
-          toast.success(`${participant.user.name || 'Someone'} joined the call`);
+          toast.success(`${participant.user?.name || 'Someone'} joined the call`);
         }
-        
+
         if (event.type === 'call.session_participant_left') {
           const participant = event.participant;
-          toast.success(`${participant.user.name || 'Someone'} left the call`);
+          toast.success(`${participant.user?.name || 'Someone'} left the call`);
         }
-        
+
         if (event.type === 'call.session_ended') {
           toast.success('Call ended');
           handleCustomLeave();
         }
       });
-  
+
       return () => {
         unsubscribe();
       };
-    }, [navigate, callingState]);
+    }, [client, callingState, handleLeaveCall]);
 
     const handleCustomLeave = async () => {
       await handleLeaveCall();
     };
 
-    return (
-      (callingState=== CallingState.JOINED) ? (
-        <StreamTheme>
-    <CallControls onLeave={handleCustomLeave} />
-  <SpeakerLayout participantsBarPosition="bottom" />
-</StreamTheme>
-      ) : (
-        <div className="h-full flex items-center justify-center bg-gray-900 text-white">
+    const handleToggleMic = () => microphone.toggle();
+    const handleToggleCamera = () => camera.toggle();
+    const handleScreenShare = () => call?.toggleScreenShare();
+
+    // Connecting state
+    if (callingState !== CallingState.JOINED) {
+      return (
+        <div className="h-screen w-full flex items-center justify-center bg-neutral-900 text-white">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p className="text-xl">Connecting to call...</p>
-            <p className="text-sm mt-2">State: {callingState}</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary-500 border-t-transparent mx-auto mb-6"></div>
+            <p className="text-xl font-medium">Connecting to call...</p>
+            <p className="text-sm text-neutral-400 mt-2">State: {callingState}</p>
           </div>
         </div>
-      )
-    )
-      }
+      );
+    }
+
+    return (
+      <StreamTheme>
+        <div className="h-screen w-full bg-neutral-900 relative">
+          {/* Video Area */}
+          <div className="h-full w-full">
+            <SpeakerLayout
+              participantView={({ participant }) => (
+                <ParticipantView
+                  participant={participant}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              )}
+              pictureInPicture={false}
+              participantsBarPosition="bottom"
+            />
+          </div>
+
+          {/* Top Bar */}
+          <div className="absolute top-0 left-0 right-0 z-20 p-4 pointer-events-none">
+            <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
+              <div className="flex items-center gap-3 bg-neutral-900/80 backdrop-blur-md rounded-xl px-4 py-2 border border-neutral-700">
+                <Avatar name="HealthBridge Call" size="md" status="online">
+                  🩺
+                </Avatar>
+                <div>
+                  <p className="font-semibold text-white">Video Consultation</p>
+                  <p className="text-xs text-neutral-400">
+                    {participants.length} participant{participants.length !== 1 ? 's' : ''} in call
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="bg-neutral-900/80 backdrop-blur-md rounded-xl px-4 py-2 border border-neutral-700 flex items-center gap-2">
+                  <Badge variant="success" size="sm" dot>Live</Badge>
+                  <span className="text-sm font-mono text-neutral-300" id="call-duration">00:00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Controls */}
+          <div className="absolute bottom-0 left-0 right-0 z-20 p-4 sm:p-6 pointer-events-none">
+            <div className="max-w-4xl mx-auto flex items-center justify-center gap-4 pointer-events-auto">
+              {/* Mic Toggle */}
+              <Button
+                variant={isMicMuted ? 'danger' : 'primary'}
+                size="xl"
+                onClick={handleToggleMic}
+                aria-label={isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
+                className="w-16 h-16 p-0 flex items-center justify-center rounded-full"
+              >
+                {isMicMuted ? (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                  </svg>
+                ) : (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                )}
+              </Button>
+
+              {/* Camera Toggle */}
+              <Button
+                variant={isCameraMuted ? 'danger' : 'primary'}
+                size="xl"
+                onClick={handleToggleCamera}
+                aria-label={isCameraMuted ? 'Turn on camera' : 'Turn off camera'}
+                className="w-16 h-16 p-0 flex items-center justify-center rounded-full"
+              >
+                {isCameraMuted ? (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542 7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l-4-4m4 0l4-4m-4 4l-4 4m4 0l4 4" />
+                  </svg>
+                ) : (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542 7z" />
+                  </svg>
+                )}
+              </Button>
+
+              {/* Screen Share */}
+              <Button
+                variant="secondary"
+                size="xl"
+                onClick={handleScreenShare}
+                aria-label="Share screen"
+                className="w-16 h-16 p-0 flex items-center justify-center rounded-full"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </Button>
+
+              {/* Leave Call */}
+              <Button
+                variant="danger"
+                size="xl"
+                onClick={handleCustomLeave}
+                aria-label="Leave call"
+                className="w-16 h-16 p-0 flex items-center justify-center rounded-full"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </Button>
+            </div>
+          </div>
+
+          {/* Call Duration Timer */}
+          <CallDurationTimer />
+        </div>
+      </StreamTheme>
+    );
+  };
 
   return (
-    <div className="h-screen w-full bg-gray-900">
+    <div className="h-screen w-full">
       <StreamCall call={call}>
-        <ActiveCallScreen handleLeaveCall={handleLeaveCall}/>
+        <ActiveCallScreen handleLeaveCall={handleLeaveCall} />
       </StreamCall>
     </div>
   );
 };
 
-const styles = {
-  controlButton: {
-    border: 'none',
-    borderRadius: 50,
-    width: 50,
-    height: 50,
-    fontSize: 20,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s'
-  },
-}
+// Call Duration Timer Component
+const CallDurationTimer = () => {
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDuration(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (seconds) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          const el = document.getElementById('call-duration');
+          if (el) el.textContent = '${formatTime(duration)}';
+        `,
+      }}
+    />
+  );
+};
 
 export default CallScreen;

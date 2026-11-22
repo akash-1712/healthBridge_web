@@ -2,7 +2,7 @@
     "rewrites": [
       {
         "source": "/backend/:path*",
-        "destination": "https://healthbridge-patient-backend.vercel.app/:path*"
+        "destination": "https://akash-health-bridge.vercel.app/:path*"
       }
     ]
   }

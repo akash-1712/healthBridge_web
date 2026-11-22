@@ -382,9 +382,6 @@ export default function Home() {
                   />
                   <span className="hidden sm:inline">Download on Google Play</span>
                 </a>
-                <p className="text-text-secondary text-sm mt-3">
-                  Free to download • 4.8★ rating • 50K+ downloads
-                </p>
               </div>
             </Card>
           </div>
